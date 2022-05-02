@@ -4,8 +4,8 @@ import random
 from itertools import accumulate
 from typing import Tuple, Any
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from pandas import DataFrame
 from sklearn.model_selection import train_test_split
 
@@ -116,7 +116,7 @@ def movielens_preprocess(interactions, items, users):
 
     item_count = interactions.groupby('MovieID')['Rating'].transform('count')
     interactions = interactions[item_count > 3].copy()
-    
+
     # MovieID -> item_id
     movie_ids = set(interactions['MovieID'].unique().tolist())
     movie_id_mapper = DefaultDict(None, {
@@ -125,7 +125,7 @@ def movielens_preprocess(interactions, items, users):
 
     interactions['item_id'] = interactions['MovieID'].map(lambda x: movie_id_mapper[x])
     items['item_id'] = items['MovieID'].map(lambda x: movie_id_mapper[x])
-    
+
     # UserID -> user_id
     user_ids = set(interactions['UserID'].unique().tolist())
     user_id_mapper = DefaultDict(None, {
@@ -134,27 +134,27 @@ def movielens_preprocess(interactions, items, users):
 
     interactions['user_id'] = interactions['UserID'].map(lambda x: user_id_mapper[x])
     users['user_id'] = users['UserID'].map(lambda x: user_id_mapper[x])
-    
+
     # test data negative sampling
     train, test = last_session_test_split(interactions, user_col='user_id', time_col='Timestamp')
     test = get_negative_samples(train, test, user_col='user_id', item_col='item_id')
-    
+
     # validation data negative sampling
-    logs = train.groupby('user_id')['item_id'].agg(lambda x : x.tolist()).to_dict()
+    logs = train.groupby('user_id')['item_id'].agg(lambda x: x.tolist()).to_dict()
     item_size = train['item_id'].max()
-    ws = 2 # window_size
+    ws = 2  # window_size
     center_item = []
     context_item = []
     label = []
     total = len(logs)
     for i, key in enumerate(logs):
-        progressbar(total, i+1, prefix='validation negative sampling')
+        progressbar(total, i + 1, prefix='validation negative sampling')
         sample = logs[key]
         for i in range(len(sample)):
-            context = sample[i-ws:i] + sample[i+1:i+1+ws]
+            context = sample[i - ws:i] + sample[i + 1:i + 1 + ws]
 
             negative = []
-            while len(negative) < ws*2:
+            while len(negative) < ws * 2:
                 j = np.random.randint(item_size)
                 if j not in sample:
                     negative.append(j)
@@ -170,7 +170,7 @@ def movielens_preprocess(interactions, items, users):
             )
 
     train = pd.DataFrame({
-        'center_item' : center_item, 'context_item' : context_item, 'label' : label
+        'center_item': center_item, 'context_item': context_item, 'label': label
     })
 
     return train, test, items, users
@@ -193,7 +193,7 @@ if __name__ == '__main__':
     train, test, item_meta, user_meta = preprocess_data(
         argument.dataset, log_data, item_meta, user_meta
     )
-    
+
     train, val = train_test_split(train, test_size=0.3, shuffle=True, random_state=42)
     print(f'train data size : {len(train)}, val data size : {len(val)}, test data size : {len(test)}')
     print(f'total item size : {len(item_meta)}, total user size : {len(user_meta)}')
@@ -205,10 +205,10 @@ if __name__ == '__main__':
 
     train.to_csv(os.path.join(save_dir, 'train.tsv'), sep='\t', index=False)
     val.to_csv(os.path.join(save_dir, 'val.tsv'), sep='\t', index=False)
-    
+
     item_meta.to_csv(os.path.join(save_dir, 'item_meta.tsv'), sep='\t', index=False)
     user_meta.to_csv(os.path.join(save_dir, 'user_meta.tsv'), sep='\t', index=False)
-    
+
     with open(os.path.join(save_dir, 'negative_test.dat'), 'w') as f:
         for row in test:
             row = '\t'.join([str(v) for v in row])

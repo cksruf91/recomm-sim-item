@@ -153,7 +153,7 @@ def train(model, epoch, train_dataloader, val_dataloader, loss_func, optim, metr
             func(model, history)
 
         print(
-            f" Acc : {history['acc']:3.3f} val_loss : {history['val_loss']:3.3f}, Acc : {history['val_acc']:3.3f}")
+            f" Acc : {history['acc']:3.3f} val_loss : {history['val_loss']:3.3f}, val_Acc : {history['val_acc']:3.3f}")
 
 
 if __name__ == '__main__':

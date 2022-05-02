@@ -11,8 +11,8 @@ class Item2Vector(torch.nn.Module):
         self.activation = torch.nn.ReLU()
         self.fc_2 = torch.nn.Linear(emb_dim, 1)
         
-    def forward(self, centor, context):
-        emb_1 = self.embedding_1(centor)
+    def forward(self, center, context):
+        emb_1 = self.embedding_1(center)
         emb_2 = self.embedding_1(context)
         
         x = torch.concat([emb_1, emb_2], dim=-1)
