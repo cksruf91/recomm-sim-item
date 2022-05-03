@@ -13,6 +13,8 @@ from common.loading_functions import loading_data
 from common.utils import DefaultDict, progressbar
 from config import CONFIG
 
+random.seed(42)
+
 
 def args():
     parser = argparse.ArgumentParser()
@@ -45,24 +47,24 @@ def weighted_random_sample(n, exclude_items, items, cum_sums):
     return sample
 
 
-def get_negative_samples(train_df, test_df, user_col, item_col, n_sample=99, method='random'):
+def get_negative_samples(train_df, test_df, n_sample=99, method='random'):
     negative_sampled_test = []
 
     # 샘플링을 위한 아이템들의 누적합
     # train_df.loc[:,'item_count'] = 1
     train_df = train_df.assign(item_count=1)
-    item_counts = train_df.groupby(item_col)['item_count'].sum().reset_index()
+    item_counts = train_df.groupby('item_id')['item_count'].sum().reset_index()
     item_counts['cumulate_count'] = [c for c in accumulate(item_counts.item_count)]
 
     # 샘플링을 위한 변수
-    item_list = item_counts[item_col].tolist()
+    item_list = item_counts['item_id'].tolist()
     item_cumulate_count = item_counts['cumulate_count'].tolist()
 
     # 유저가 이전에 interaction 했던 아이템들
-    user_interactions = train_df.groupby(user_col)[item_col].agg(lambda x: set(x.tolist()))
+    user_interactions = train_df.groupby('user_id')['item_id'].agg(lambda x: set(x.tolist()))
 
-    for uid, iid in zip(test_df[user_col].tolist(), test_df[item_col].tolist()):
-        row = [uid, iid]
+    for uid, pid, iid in zip(test_df['user_id'].tolist(), test_df['prev_item_id'].tolist(), test_df['item_id'].tolist()):
+        row = [iid]
 
         try:
             inter_items = user_interactions[uid]
@@ -135,11 +137,16 @@ def movielens_preprocess(interactions, items, users):
     interactions['user_id'] = interactions['UserID'].map(lambda x: user_id_mapper[x])
     users['user_id'] = users['UserID'].map(lambda x: user_id_mapper[x])
 
+    # prev_item_id 생성
+    interactions['prev_item_id'] = [-1] + interactions['item_id'].tolist()[:-1]
+    interactions.loc[interactions['user_id'].diff(1) != 0, 'prev_item_id'] = -1
+    interactions = interactions[interactions['prev_item_id'] != -1]
+
     # test data negative sampling
     train, test = last_session_test_split(interactions, user_col='user_id', time_col='Timestamp')
-    test = get_negative_samples(train, test, user_col='user_id', item_col='item_id')
+    test['negative_sample'] = get_negative_samples(train, test)
 
-    # validation data negative sampling
+    # validation data negative sampling(SGNS)
     logs = train.groupby('user_id')['item_id'].agg(lambda x: x.tolist()).to_dict()
     item_size = train['item_id'].max()
     ws = 2  # window_size
@@ -177,7 +184,7 @@ def movielens_preprocess(interactions, items, users):
 
 
 def preprocess_data(data_type: str, interactions: DataFrame, items: DataFrame, users: DataFrame) -> Tuple[
-    Any, Any, Any]:
+    Any, Any, Any, Any]:
     if data_type == '1M':
         loading_function = movielens_preprocess
     else:
@@ -205,11 +212,7 @@ if __name__ == '__main__':
 
     train.to_csv(os.path.join(save_dir, 'train.tsv'), sep='\t', index=False)
     val.to_csv(os.path.join(save_dir, 'val.tsv'), sep='\t', index=False)
+    test.to_csv(os.path.join(save_dir, 'test.tsv'), sep='\t', index=False)
 
     item_meta.to_csv(os.path.join(save_dir, 'item_meta.tsv'), sep='\t', index=False)
     user_meta.to_csv(os.path.join(save_dir, 'user_meta.tsv'), sep='\t', index=False)
-
-    with open(os.path.join(save_dir, 'negative_test.dat'), 'w') as f:
-        for row in test:
-            row = '\t'.join([str(v) for v in row])
-            f.write(row + '\n')

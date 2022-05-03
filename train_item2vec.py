@@ -83,6 +83,8 @@ def train_progressbar(total: int, i: int, bar_length: int = 50, prefix: str = ''
 
 
 def train(model, epoch, train_dataloader, val_dataloader, loss_func, optim, metrics=[], callback=[]):
+    """ training Item2Vec(SGNS) model
+    """
     for e in range(epoch):
         # --------- train ---------
         model.train()

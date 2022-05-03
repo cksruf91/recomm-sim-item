@@ -49,7 +49,7 @@ class TrainHistory:
 
     def __call__(self, model, history):
         with open(self.file, 'a+') as f:
-            f.write(str(history) + '\n')
+            f.write(str(history) + '\n') 
 
 
 class MlflowLogger:
@@ -118,3 +118,4 @@ class MlflowLogger:
         with sqlite3.connect('~/mydb.sqlite') as conn:  # sqlite:///mydb.sqlite
             cur = conn.cursor()
             cur.execute(sql)
+ 
