@@ -158,7 +158,7 @@ def movielens_preprocess(interactions, items, users):
         progressbar(total, i + 1, prefix='validation negative sampling')
         sample = logs[key]
         for i in range(len(sample)):
-            context = sample[i - ws:i] + sample[i + 1:i + 1 + ws]
+            context = sample[max(0, i - ws):i] + sample[i + 1:i + 1 + ws]
 
             negative = []
             while len(negative) < ws * 2:
